@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>盲播猜歌</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#202124;background:#f5f6f8}
+*{box-sizing:border-box} body{margin:0}.wrap{max-width:920px;margin:28px auto;padding:0 16px}
+.card{background:#fff;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 3px 14px #00000012}
+h1{margin:0 0 8px} h2{margin:0 0 12px;font-size:20px}.muted{color:#69707d;font-size:14px}
+textarea{width:100%;min-height:180px;resize:vertical;padding:12px;border:1px solid #cfd3da;border-radius:10px;font:inherit}
+button,select{font:inherit;border:0;border-radius:10px;padding:10px 14px;margin:4px;cursor:pointer}
+button{background:#222;color:#fff}.secondary{background:#e9ebef;color:#222}.danger{background:#a33}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.controls label{font-size:14px}
+#playerWrap{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden}
+#player{width:100%;height:100%}#cover{position:absolute;inset:0;background:#000;color:#fff;display:none;align-items:center;justify-content:center;text-align:center;z-index:5;font-size:30px}
+#cover small{display:block;font-size:15px;color:#bbb;margin-top:8px}.status{min-height:24px;margin:10px 0;font-weight:600}
+.answer{font-size:24px;font-weight:700;min-height:34px;margin:12px 0}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hidden{display:none}.count{font-size:18px;font-weight:700}.timer{font-variant-numeric:tabular-nums;font-size:28px}
+code{background:#eef0f3;padding:2px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>🎵 盲播猜歌</h1>
+    <div class="muted">貼 YouTube 網址，一行一首。主持人播放片段，朋友在 Discord 直接猜。</div>
+  </div>
+
+  <section id="setup" class="card">
+    <h2>歌曲清單</h2>
+    <p class="muted">只貼網址即可；也可以寫成 <code>網址 | 歌名 | 歌手</code>，方便揭曉。</p>
+    <textarea id="songs" placeholder="https://www.youtube.com/watch?v=vB8sxY_PJ_w
+https://www.youtube.com/watch?v=BY7CnLX5Mk0"></textarea>
+    <div class="controls">
+      <label>盲播秒數
+        <select id="duration"><option>10</option><option>15</option><option selected>20</option><option>30</option></select>
+      </label>
+      <label><input id="shuffle" type="checkbox" checked> 隨機順序</label>
+      <button id="startBtn">開始遊戲</button>
+    </div>
+  </section>
+
+  <section id="game" class="card hidden">
+    <div class="row"><span id="progress" class="count"></span><span id="timer" class="timer"></span></div>
+    <div id="playerWrap">
+      <div id="player"></div>
+      <div id="cover">🎵 盲播中<small id="coverText">請猜歌！</small></div>
+    </div>
+    <div id="status" class="status">按「開始盲播」播放。</div>
+    <div class="row">
+      <button id="playBtn">▶ 開始盲播</button>
+      <button id="revealBtn" class="secondary">👀 揭曉答案</button>
+      <button id="nextBtn" class="secondary">下一首 →</button>
+      <button id="resetBtn" class="secondary">重新設定</button>
+    </div>
+    <div id="answer" class="answer"></div>
+    <div class="muted">如果按「開始盲播」後 YouTube 沒有開始播放，請直接按播放器裡的 ▶；成功播放後會自動進入盲播倒數。</div>
+  </section>
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+let player=null, songs=[], order=[], pos=0, timer=null, stopTimer=null, playing=false, coverShown=false;
+const $=id=>document.getElementById(id);
+
+function getVideoId(raw){
+  try{
+    const u=new URL(raw.trim());
+    if(u.hostname==='youtu.be'||u.hostname.endsWith('.youtu.be')) return u.pathname.slice(1).split('/')[0];
+    const v=u.searchParams.get('v'); if(v) return v;
+    const m=u.pathname.match(/\/(?:shorts|embed)\/([^/?]+)/); return m?m[1]:null;
+  }catch{return null}
+}
+function parseLine(line){
+  const p=line.split('|').map(x=>x.trim());
+  const id=getVideoId(p[0]);
+  return id?{id,title:p[1]||'',artist:p[2]||''}:null;
+}
+function onYouTubeIframeAPIReady(){ }
+function loadVideo(){
+  clearTimers(); playing=false; coverShown=false;
+  const s=songs[order[pos]];
+  $('progress').textContent=`第 ${pos+1} / ${order.length} 首`;
+  $('timer').textContent=''; $('answer').textContent='';
+  $('cover').style.display='none'; $('status').textContent='按「開始盲播」播放。';
+  if(player){player.loadVideoById(s.id); player.stopVideo();}
+  else{
+    player=new YT.Player('player',{
+      videoId:s.id,
+      playerVars:{controls:1,rel:0,playsinline:1,origin:location.origin},
+      events:{onReady:()=>{},onStateChange:onStateChange,onError:onPlayerError}
+    });
+  }
+}
+function onPlayerError(e){ $('status').textContent='YouTube 無法播放這支影片（錯誤 '+e.data+'）。請換一支可嵌入的影片。'; }
+function onStateChange(e){
+  if(e.data===YT.PlayerState.PLAYING && !playing){
+    playing=true; beginBlind();
+  }
+}
+function beginBlind(){
+  $('cover').style.display='flex'; coverShown=true;
+  const total=Number($('duration').value); let left=total;
+  $('timer').textContent=left+' 秒'; $('status').textContent='盲播中';
+  clearTimers();
+  timer=setInterval(()=>{left--; $('timer').textContent=Math.max(0,left)+' 秒';},1000);
+  stopTimer=setTimeout(()=>{
+    clearTimers(); if(player) player.pauseVideo(); playing=false;
+    $('timer').textContent='時間到'; $('status').textContent='時間到！';
+  },total*1000);
+}
+function clearTimers(){if(timer)clearInterval(timer);if(stopTimer)clearTimeout(stopTimer);timer=null;stopTimer=null;}
+function playBlind(){
+  if(!player){$('status').textContent='播放器尚未準備好，請稍候。';return}
+  $('status').textContent='正在啟動播放…';
+  player.unMute(); player.setVolume(100); player.playVideo();
+  // 若瀏覽器允許 iframe 有聲播放，onStateChange 會自動進入盲播；否則保留播放器讓使用者按一次 ▶。
+  setTimeout(()=>{
+    if(!playing) $('status').textContent='如果沒有開始播放，請按影片內的 ▶；播放成功後會自動開始倒數。';
+  },900);
+}
+function reveal(){
+  clearTimers(); if(player)player.pauseVideo(); playing=false; $('cover').style.display='none';
+  const s=songs[order[pos]]; $('timer').textContent='';
+  $('answer').textContent=s.title?`答案：${s.title}${s.artist?' — '+s.artist:''}`:'答案請由主持人自行揭曉';
+  $('status').textContent='已揭曉';
+}
+function next(){if(pos>=order.length-1){$('status').textContent='全部播完！🎉';return} pos++;loadVideo();}
+function reset(){location.reload()}
+$('startBtn').onclick=()=>{
+  songs=$('songs').value.split(/\r?\n/).map(parseLine).filter(Boolean);
+  if(!songs.length){alert('請至少輸入一個有效的 YouTube 網址');return}
+  order=songs.map((_,i)=>i); if($('shuffle').checked)order.sort(()=>Math.random()-.5);
+  pos=0;$('setup').classList.add('hidden');$('game').classList.remove('hidden');loadVideo();
+};
+$('playBtn').onclick=playBlind;$('revealBtn').onclick=reveal;$('nextBtn').onclick=next;$('resetBtn').onclick=reset;
+</script>
+</body>
+</html>
