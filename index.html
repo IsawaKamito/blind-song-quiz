@@ -76,6 +76,11 @@ button.secondary{
   color:#222
 }
 
+button.danger{
+  background:#e9ebef;
+  color:#b42318
+}
+
 button:disabled{
   opacity:.4;
   cursor:not-allowed
@@ -211,6 +216,10 @@ https://www.youtube.com/watch?v=BY7CnLX5Mk0"></textarea>
         隨機順序
       </label>
 
+      <button id="clearBtn" class="danger">
+        🗑️ 全部清除
+      </button>
+
       <button id="startBtn">
         開始遊戲
       </button>
@@ -266,7 +275,7 @@ https://www.youtube.com/watch?v=BY7CnLX5Mk0"></textarea>
     <div class="row">
 
       <button id="playBtn">
-        ▶ 開始盲播
+        ▶ 盲播 20 秒
       </button>
 
       <button id="pauseBtn" class="secondary">
@@ -278,7 +287,7 @@ https://www.youtube.com/watch?v=BY7CnLX5Mk0"></textarea>
       </button>
 
       <button id="continueBtn" class="secondary">
-        ⏭ 盲播結束後繼續
+        ⏭ 結束後繼續
       </button>
 
     </div>
@@ -357,11 +366,15 @@ let songs = [];
 let order = [];
 let pos = 0;
 
-let blindTimer = null;
+let countdownTimer = null;
 let stopTimer = null;
 
-let playing = false;
+let remainingSeconds = 0;
+let isCountdownRunning = false;
 let blindFinished = false;
+
+let ytReady = false;
+let ytReadyQueue = [];
 
 
 /* -------------------------
@@ -372,7 +385,34 @@ const $ = id =>
   document.getElementById(id);
 
 
-/* 取得 YouTube Video ID */
+/* YouTube API 載入完成 */
+
+function onYouTubeIframeAPIReady(){
+
+  ytReady = true;
+
+  ytReadyQueue.forEach(fn => fn());
+
+  ytReadyQueue = [];
+
+}
+
+
+function whenYTReady(fn){
+
+  if(ytReady){
+    fn();
+  }else{
+    ytReadyQueue.push(fn);
+  }
+
+}
+
+
+/* -------------------------
+   取得 YouTube Video ID
+------------------------- */
+
 function getVideoId(raw){
 
   try{
@@ -414,7 +454,10 @@ function getVideoId(raw){
 }
 
 
-/* 解析歌曲 */
+/* -------------------------
+   解析歌曲
+------------------------- */
+
 function parseLine(line){
 
   const text =
@@ -480,25 +523,15 @@ function getCurrentVideoTitle(){
 
 
 /* -------------------------
-   YouTube 播放器
+   播放器
 ------------------------- */
 
-function onYouTubeIframeAPIReady(){
-
-  /*
-    API 載入完成後，
-    真正的 player 會在 loadVideo() 建立。
-  */
-
-}
-
-
-/* 建立 / 載入影片 */
 function loadVideo(){
 
   clearTimers();
 
-  playing = false;
+  remainingSeconds = 0;
+  isCountdownRunning = false;
   blindFinished = false;
 
   const song =
@@ -517,7 +550,6 @@ function loadVideo(){
   $('blindText').textContent =
     '準備盲播';
 
-
   $('status').textContent =
     '播放器準備中……';
 
@@ -525,47 +557,59 @@ function loadVideo(){
   resetSeekButtons();
 
 
-  if(player){
+  whenYTReady(() => {
 
-    player.loadVideoById(
-      song.id
-    );
+    if(player){
 
-    return;
+      player.loadVideoById(
+        song.id
+      );
 
-  }
+      setTimeout(
+        updateVideoInfo,
+        800
+      );
+
+      return;
+
+    }
 
 
-  player =
-    new YT.Player(
-      'player',
-      {
+    player =
+      new YT.Player(
+        'player',
+        {
 
-        width:'1',
-        height:'1',
+          width:'1',
+          height:'1',
 
-        videoId:song.id,
+          videoId:song.id,
 
-        playerVars:{
-          controls:0,
-          rel:0,
-          playsinline:1,
-          origin:location.origin
-        },
+          playerVars:{
+            controls:0,
+            rel:0,
+            playsinline:1,
+            origin:location.origin
+          },
 
-        events:{
-          onReady:onPlayerReady,
-          onStateChange:onStateChange,
-          onError:onPlayerError
+          events:{
+            onReady:onPlayerReady,
+            onStateChange:onStateChange,
+            onError:onPlayerError
+          }
+
         }
+      );
 
-      }
-    );
+  });
 
 }
 
 
-/* 播放器準備 */
+/* -------------------------
+   播放器準備
+------------------------- */
+
 function onPlayerReady(){
 
   updateVideoInfo();
@@ -576,12 +620,14 @@ function onPlayerReady(){
 }
 
 
-/* 影片載入後更新資訊 */
+/* -------------------------
+   更新影片資訊
+------------------------- */
+
 function updateVideoInfo(){
 
   const song =
     songs[order[pos]];
-
 
   try{
 
@@ -614,7 +660,10 @@ function updateVideoInfo(){
 }
 
 
-/* YouTube 狀態 */
+/* -------------------------
+   YouTube 狀態
+------------------------- */
+
 function onStateChange(e){
 
   if(
@@ -623,23 +672,15 @@ function onStateChange(e){
 
     updateVideoInfo();
 
-    playing = true;
-
-  }
-
-
-  if(
-    e.data === YT.PlayerState.PAUSED
-  ){
-
-    playing = false;
-
   }
 
 }
 
 
-/* YouTube 播放錯誤 */
+/* -------------------------
+   播放錯誤
+------------------------- */
+
 function onPlayerError(e){
 
   $('status').textContent =
@@ -651,38 +692,35 @@ function onPlayerError(e){
 
 
 /* -------------------------
-   計時器
+   清除計時器
 ------------------------- */
 
 function clearTimers(){
 
-  if(blindTimer){
-    clearInterval(blindTimer);
+  if(countdownTimer){
+    clearInterval(countdownTimer);
   }
 
   if(stopTimer){
     clearTimeout(stopTimer);
   }
 
-  blindTimer = null;
+  countdownTimer = null;
   stopTimer = null;
 
 }
 
 
 /* -------------------------
-   開始盲播
+   開始一段 N 秒播放
 ------------------------- */
 
-function playBlind(){
+function startTimedPlayback(){
 
   if(!player){
-
     $('status').textContent =
       '播放器尚未準備好。';
-
     return;
-
   }
 
 
@@ -690,77 +728,100 @@ function playBlind(){
 
   blindFinished = false;
 
-
   const total =
     Number(
       $('duration').value
     );
 
 
+  remainingSeconds =
+    total;
+
+  isCountdownRunning =
+    true;
+
+
   $('blindText').textContent =
     '盲播中';
 
+  $('timer').textContent =
+    remainingSeconds + ' 秒';
 
   $('status').textContent =
     '🎵 正在播放，請猜歌！';
 
 
   player.unMute();
-
   player.setVolume(100);
-
   player.playVideo();
 
 
-  let left =
-    total;
+  countdownTimer =
+    setInterval(() => {
 
+      if(!isCountdownRunning){
+        return;
+      }
+
+      remainingSeconds--;
+
+      $('timer').textContent =
+        Math.max(
+          0,
+          remainingSeconds
+        ) + ' 秒';
+
+
+      if(
+        remainingSeconds <= 0
+      ){
+
+        finishTimedPlayback();
+
+      }
+
+    },1000);
+
+}
+
+
+/* -------------------------
+   播放時間到
+------------------------- */
+
+function finishTimedPlayback(){
+
+  clearTimers();
+
+  remainingSeconds = 0;
+  isCountdownRunning = false;
+
+  if(player){
+    player.pauseVideo();
+  }
+
+  blindFinished = true;
+
+
+  $('blindText').textContent =
+    '盲播結束';
 
   $('timer').textContent =
-    left + ' 秒';
+    '時間到';
+
+  $('status').textContent =
+    '盲播結束。可以公布答案，或繼續播放。';
+
+}
 
 
-  blindTimer =
-    setInterval(
-      () => {
+/* -------------------------
+   盲播
+------------------------- */
 
-        left--;
+function playBlind(){
 
-        $('timer').textContent =
-          Math.max(0,left) + ' 秒';
-
-      },
-      1000
-    );
-
-
-  stopTimer =
-    setTimeout(
-      () => {
-
-        clearTimers();
-
-        if(player){
-          player.pauseVideo();
-        }
-
-        playing = false;
-        blindFinished = true;
-
-
-        $('blindText').textContent =
-          '盲播結束';
-
-        $('timer').textContent =
-          '時間到';
-
-
-        $('status').textContent =
-          '盲播結束。可以公布答案，或繼續播放。';
-
-      },
-      total * 1000
-    );
+  startTimedPlayback();
 
 }
 
@@ -775,13 +836,18 @@ function pauseVideo(){
     return;
   }
 
+
   player.pauseVideo();
 
   /*
-    暫停不清掉盲播倒數。
-    因此如果是在盲播中暫停，
-    再按繼續時會繼續倒數。
+    注意：
+    不清除 countdownTimer。
+    但 isCountdownRunning 設為 false，
+    因此倒數會跟著暫停。
   */
+
+  isCountdownRunning = false;
+
 
   $('status').textContent =
     '已暫停。';
@@ -799,20 +865,48 @@ function resumeVideo(){
     return;
   }
 
-  player.unMute();
 
-  player.setVolume(100);
+  /*
+    如果目前還有剩餘倒數，
+    就從原本剩餘秒數繼續。
+  */
 
-  player.playVideo();
+  if(
+    remainingSeconds > 0
+  ){
 
-  $('status').textContent =
-    '▶ 繼續播放。';
+    isCountdownRunning = true;
+
+    player.unMute();
+    player.setVolume(100);
+    player.playVideo();
+
+    $('blindText').textContent =
+      '盲播中';
+
+    $('timer').textContent =
+      remainingSeconds + ' 秒';
+
+    $('status').textContent =
+      '▶ 繼續播放。';
+
+    return;
+
+  }
+
+
+  /*
+    如果目前沒有正在進行的倒數，
+    則開始一段新的 N 秒。
+  */
+
+  startTimedPlayback();
 
 }
 
 
 /* -------------------------
-   盲播結束後繼續
+   結束後繼續
 ------------------------- */
 
 function continueAfterBlind(){
@@ -821,27 +915,10 @@ function continueAfterBlind(){
     return;
   }
 
-
-  clearTimers();
-
-  blindFinished = false;
-
-  player.unMute();
-
-  player.setVolume(100);
-
-  player.playVideo();
-
+  startTimedPlayback();
 
   $('blindText').textContent =
     '繼續播放';
-
-  $('timer').textContent =
-    '';
-
-
-  $('status').textContent =
-    '⏭ 繼續播放中。';
 
 }
 
@@ -857,11 +934,6 @@ function seekTo(seconds){
   }
 
 
-  clearTimers();
-
-  blindFinished = false;
-
-
   const duration =
     player.getDuration();
 
@@ -874,33 +946,29 @@ function seekTo(seconds){
   }
 
 
+  /*
+    跳轉 = 新的一段 N 秒播放
+  */
+
   player.seekTo(
     seconds,
     true
   );
 
 
-  player.unMute();
-
-  player.setVolume(100);
-
-  player.playVideo();
-
-
-  $('blindText').textContent =
-    '播放中';
-
-  $('timer').textContent =
-    '';
+  startTimedPlayback();
 
 
   $('status').textContent =
-    `已跳到 ${formatTime(seconds)}。`;
+    `已跳到 ${formatTime(seconds)}，開始 ${$('duration').value} 秒播放。`;
 
 }
 
 
-/* 秒數格式 */
+/* -------------------------
+   秒數格式
+------------------------- */
+
 function formatTime(seconds){
 
   seconds =
@@ -945,11 +1013,6 @@ function updateSeekButtons(){
           btn.dataset.seek
         );
 
-      /*
-        只有影片長度 >= 該時間
-        才允許按。
-      */
-
       btn.disabled =
         seconds > duration;
 
@@ -963,12 +1026,6 @@ function resetSeekButtons(){
   document
     .querySelectorAll('.seekBtn')
     .forEach(btn => {
-
-      /*
-        0 秒永遠可以按。
-        其他先暫時停用，
-        等取得影片長度後更新。
-      */
 
       const seconds =
         Number(
@@ -987,17 +1044,15 @@ function resetSeekButtons(){
    揭曉
 ------------------------- */
 
-async function reveal(){
+function reveal(){
 
   clearTimers();
 
+  isCountdownRunning = false;
 
   if(player){
     player.pauseVideo();
   }
-
-
-  playing = false;
 
 
   $('blindText').textContent =
@@ -1014,11 +1069,6 @@ async function reveal(){
   let title =
     song.title;
 
-
-  /*
-    如果之前沒有抓到，
-    揭曉時再嘗試一次。
-  */
 
   if(!title){
 
@@ -1061,6 +1111,10 @@ function next(){
 
   clearTimers();
 
+  isCountdownRunning = false;
+
+  remainingSeconds = 0;
+
 
   if(
     pos >= order.length - 1
@@ -1087,6 +1141,45 @@ function next(){
   pos++;
 
   loadVideo();
+
+}
+
+
+/* -------------------------
+   回到設定頁
+   保留歌曲
+------------------------- */
+
+function resetGame(){
+
+  clearTimers();
+
+  isCountdownRunning = false;
+  remainingSeconds = 0;
+
+  if(player){
+    player.pauseVideo();
+  }
+
+
+  $('game')
+    .classList
+    .add('hidden');
+
+  $('setup')
+    .classList
+    .remove('hidden');
+
+}
+
+
+/* -------------------------
+   全部清除
+------------------------- */
+
+function clearAllSongs(){
+
+  $('songs').value = '';
 
 }
 
@@ -1142,13 +1235,25 @@ $('startBtn').onclick =
       .classList
       .add('hidden');
 
-
     $('game')
       .classList
       .remove('hidden');
 
 
     loadVideo();
+
+  };
+
+
+/* -------------------------
+   盲播秒數改變時
+------------------------- */
+
+$('duration').onchange =
+  () => {
+
+    $('playBtn').textContent =
+      `▶ 盲播 ${$('duration').value} 秒`;
 
   };
 
@@ -1176,10 +1281,15 @@ $('nextBtn').onclick =
   next;
 
 $('resetBtn').onclick =
-  () => location.reload();
+  resetGame;
+
+$('clearBtn').onclick =
+  clearAllSongs;
 
 
-/* 跳轉按鈕 */
+/* -------------------------
+   跳轉按鈕
+------------------------- */
 
 document
   .querySelectorAll('.seekBtn')
