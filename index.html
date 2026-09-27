@@ -15,21 +15,18 @@
     color: #222;
   }
 
-  h1 {
-    text-align: center;
-  }
+  h1 { text-align: center; }
 
   textarea {
     width: 100%;
-    height: 180px;
+    height: 200px;
     box-sizing: border-box;
     padding: 10px;
     font-size: 14px;
     resize: vertical;
   }
 
-  select,
-  button {
+  select, button {
     font-size: 15px;
     padding: 8px 12px;
     margin: 4px;
@@ -41,13 +38,8 @@
     opacity: 0.45;
   }
 
-  .setup-row {
-    margin: 15px 0;
-  }
-
-  .game {
-    display: none;
-  }
+  .setup-row { margin: 15px 0; }
+  .game { display: none; }
 
   .progress {
     text-align: center;
@@ -71,29 +63,42 @@
     margin-bottom: 20px;
   }
 
-  .controls {
+  .controls, .seek-controls {
     text-align: center;
     margin: 15px 0;
-  }
-
-  .seek-controls {
-    text-align: center;
-    margin: 20px 0;
   }
 
   .answer {
     display: none;
     background: white;
     border-radius: 10px;
-    padding: 15px;
+    padding: 20px;
     margin-top: 20px;
     text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .answer-label {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 6px;
   }
 
   .answer-title {
     font-size: 20px;
     font-weight: bold;
-    word-break: break-word;
+  }
+
+  .answer-note {
+    font-size: 17px;
+    margin-top: 12px;
+    white-space: pre-wrap;
+  }
+
+  .answer-youtube {
+    color: #666;
+    font-size: 13px;
+    margin-top: 16px;
   }
 
   .status {
@@ -110,25 +115,18 @@
     top: -10000px;
     overflow: hidden;
   }
-
-  .danger {
-    background: #eee;
-  }
 </style>
 </head>
 
 <body>
 
 <div id="setup">
-
   <h1>🎵 Blind Song Quiz</h1>
 
-  <p>每行貼一個 YouTube 網址：</p>
+  <p>每行貼一個 YouTube 網址，可在網址後面加上 | 和答案註解：</p>
 
-  <textarea
-    id="songs"
-    placeholder="https://www.youtube.com/watch?v=xxxxx&#10;https://www.youtube.com/watch?v=yyyyy"
-  ></textarea>
+  <textarea id="songs"
+    placeholder="https://www.youtube.com/watch?v=xxxxx | 動畫名稱：某某&#10;https://www.youtube.com/watch?v=yyyyy | 歌手：〇〇&#10;https://www.youtube.com/watch?v=zzzzz"></textarea>
 
   <div class="setup-row">
     <label>
@@ -151,103 +149,56 @@
 
   <div class="setup-row">
     <button onclick="startGame()">開始遊戲</button>
-    <button class="danger" onclick="clearAllSongs()">🗑️ 全部清除</button>
+    <button onclick="clearAllSongs()">🗑️ 全部清除</button>
   </div>
-
 </div>
 
 
 <div id="game" class="game">
 
-  <div class="progress" id="progress">
-    第 1 / 1 首
-  </div>
-
-  <div class="timer" id="timer">
-    20
-  </div>
+  <div class="progress" id="progress"></div>
+  <div class="timer" id="timer">20</div>
 
   <div class="blind-box">
     🎵
-    <br>
-    <br>
+    <br><br>
     Blind Song
   </div>
 
   <div class="controls">
-
-    <button onclick="pauseVideo()">
-      ⏸ 暫停
-    </button>
-
-    <button onclick="resumeVideo()">
-      ▶ 繼續
-    </button>
-
-    <button onclick="continueAfterBlind()">
-      ⏭ 結束後繼續
-    </button>
-
+    <button onclick="pauseVideo()">⏸ 暫停</button>
+    <button onclick="resumeVideo()">▶ 繼續</button>
+    <button onclick="continueAfterBlind()">⏭ 結束後繼續</button>
   </div>
-
 
   <div class="seek-controls">
-
-    <div>
-      跳轉播放：
-    </div>
-
-    <button id="seek0" onclick="seekTo(0)">
-      ⏮ 0:00
-    </button>
-
-    <button id="seek60" onclick="seekTo(60)">
-      1:00
-    </button>
-
-    <button id="seek120" onclick="seekTo(120)">
-      2:00
-    </button>
-
-    <button id="seek180" onclick="seekTo(180)">
-      3:00
-    </button>
-
+    <div>跳轉播放：</div>
+    <button id="seek0" onclick="seekTo(0)">⏮ 0:00</button>
+    <button id="seek60" onclick="seekTo(60)">1:00</button>
+    <button id="seek120" onclick="seekTo(120)">2:00</button>
+    <button id="seek180" onclick="seekTo(180)">3:00</button>
   </div>
-
 
   <div class="controls">
-
-    <button onclick="revealAnswer()">
-      👀 揭曉答案
-    </button>
-
-    <button onclick="next()">
-      下一首 →
-    </button>
-
+    <button onclick="revealAnswer()">👀 揭曉答案</button>
+    <button onclick="next()">下一首 →</button>
   </div>
-
 
   <div class="answer" id="answer">
+    <div class="answer-label">自訂答案／註解</div>
+    <div class="answer-note" id="answerNote"></div>
 
-    <div>答案</div>
-
-    <div class="answer-title" id="answerTitle">
+    <div class="answer-youtube">
+      YouTube 標題
     </div>
-
+    <div class="answer-title" id="answerTitle"></div>
   </div>
-
 
   <div class="controls">
-    <button onclick="resetGame()">
-      重新設定
-    </button>
+    <button onclick="resetGame()">重新設定</button>
   </div>
 
-  <div class="status" id="status">
-  </div>
-
+  <div class="status" id="status"></div>
 </div>
 
 
@@ -259,683 +210,416 @@
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
-
 let songs = [];
 let order = [];
 let pos = 0;
-
 let player = null;
 
 let countdownTimer = null;
 let remainingSeconds = 0;
 let isCountdownRunning = false;
-let blindFinished = false;
-
 let currentDuration = 20;
 
 
-/* =========================
-   基本工具
-========================= */
+/* 基本工具 */
 
 function $(id) {
   return document.getElementById(id);
 }
 
 
-/* =========================
-   YouTube URL
-========================= */
+/* 解析 YouTube 網址 */
 
 function getYouTubeId(url) {
-
   try {
-
     const u = new URL(url);
 
-    if (u.hostname.includes("youtu.be")) {
-      return u.pathname.substring(1);
+    if (u.hostname === "youtu.be" ||
+        u.hostname.endsWith(".youtu.be")) {
+      return u.pathname.split("/").filter(Boolean)[0] || null;
     }
 
-    if (u.hostname.includes("youtube.com")) {
+    if (u.hostname === "youtube.com" ||
+        u.hostname.endsWith(".youtube.com") ||
+        u.hostname === "www.youtube-nocookie.com") {
 
       if (u.searchParams.get("v")) {
         return u.searchParams.get("v");
       }
 
-      if (u.pathname.startsWith("/shorts/")) {
-        return u.pathname.split("/")[2];
-      }
+      const parts = u.pathname.split("/").filter(Boolean);
 
-      if (u.pathname.startsWith("/embed/")) {
-        return u.pathname.split("/")[2];
+      if (["shorts", "embed", "live"].includes(parts[0])) {
+        return parts[1] || null;
       }
     }
-
   } catch (e) {}
 
   return null;
 }
 
 
-/* =========================
-   清除全部歌曲
-========================= */
+/* 清除設定頁的歌曲 */
 
 function clearAllSongs() {
   $("songs").value = "";
 }
 
 
-/* =========================
-   開始遊戲
-========================= */
+/* 開始遊戲 */
 
 function startGame() {
-
-  const lines =
-    $("songs").value
-      .split(/\r?\n/)
-      .map(x => x.trim())
-      .filter(x => x.length > 0);
+  const lines = $("songs").value
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
 
   songs = [];
 
-  for (const url of lines) {
+  for (const line of lines) {
+    // 只在第一個 | 處切開網址和註解
+    const separator = line.indexOf("|");
+
+    let url = line;
+    let note = "";
+
+    if (separator !== -1) {
+      url = line.slice(0, separator).trim();
+      note = line.slice(separator + 1).trim();
+    }
 
     const id = getYouTubeId(url);
 
     if (id) {
-
       songs.push({
-        id: id,
-        url: url
+        id,
+        url,
+        note
       });
-
     }
-
   }
 
   if (songs.length === 0) {
-
     alert("請至少輸入一個有效的 YouTube 網址。");
     return;
-
   }
 
+  currentDuration = Number($("duration").value);
 
-  currentDuration =
-    Number($("duration").value);
-
-
-  order =
-    songs.map((_, i) => i);
-
+  order = songs.map((_, i) => i);
 
   if ($("shuffle").checked) {
-
     shuffleArray(order);
-
   }
 
-
   pos = 0;
-
 
   $("setup").style.display = "none";
   $("game").style.display = "block";
 
-
   clearTimers();
-
   remainingSeconds = currentDuration;
-
   updateTimer();
-
   loadVideo();
-
 }
 
 
-/* =========================
-   洗牌
-========================= */
+/* 隨機排序 */
 
 function shuffleArray(array) {
-
-  for (
-    let i = array.length - 1;
-    i > 0;
-    i--
-  ) {
-
-    const j =
-      Math.floor(Math.random() * (i + 1));
-
-    [
-      array[i],
-      array[j]
-    ] =
-    [
-      array[j],
-      array[i]
-    ];
-
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
   }
-
 }
 
 
-/* =========================
-   YouTube Player
-========================= */
+/* YouTube Player */
 
 function onYouTubeIframeAPIReady() {
-
   player = new YT.Player("player", {
-
     width: "1",
     height: "1",
-
     videoId: "",
-
     playerVars: {
       controls: 0,
       modestbranding: 1,
       rel: 0,
       playsinline: 1
     },
-
     events: {
       onReady: onPlayerReady
     }
-
   });
-
 }
 
 
 function onPlayerReady() {
-
-  loadCurrentVideo();
-
+  if (songs.length > 0) {
+    loadCurrentVideo();
+  }
 }
 
 
-/* =========================
-   載入目前歌曲
-========================= */
+/* 載入目前歌曲，但不自動播放 */
 
 function loadVideo() {
-
   clearTimers();
 
-  remainingSeconds =
-    currentDuration;
-
-  blindFinished = false;
-
+  remainingSeconds = currentDuration;
   updateTimer();
-
   updateProgress();
-
   hideAnswer();
+  resetSeekButtons();
 
+  const song = songs[order[pos]];
 
-  if (!player) {
-    return;
+  // 先更新自訂註解
+  $("answerNote").textContent = song.note || "";
+  $("answerTitle").textContent = "";
+
+  if (player && player.cueVideoById) {
+    loadCurrentVideo();
   }
 
-
-  loadCurrentVideo();
-
+  $("status").textContent = "可以選擇時間點開始盲播。";
 }
 
 
 function loadCurrentVideo() {
+  const song = songs[order[pos]];
 
-  const song =
-    songs[order[pos]];
+  if (!song || !player) return;
 
-  if (!song) {
-    return;
-  }
-
-
-  /*
-    使用 cueVideoById，而不是 loadVideoById。
-
-    cue = 載入但不播放
-    load = 載入後直接播放
-
-    所以換下一首時不會偷偷開始播放。
-  */
-
+  // cueVideoById 只載入影片，不會直接播放
   player.cueVideoById(song.id);
 
-
-  setTimeout(
-    updateVideoInfo,
-    800
-  );
-
-
-  $("status").textContent =
-    "可以從下方時間點開始盲播。";
-
+  setTimeout(updateVideoInfo, 1000);
 }
 
 
-/* =========================
-   影片資訊
-========================= */
+/* 更新 YouTube 標題及跳轉按鈕 */
 
 function updateVideoInfo() {
+  if (!player || !player.getVideoData) return;
 
-  if (!player) {
-    return;
-  }
-
-  const data =
-    player.getVideoData();
+  const data = player.getVideoData();
 
   if (data && data.title) {
-
-    $("answerTitle").textContent =
-      data.title;
-
+    $("answerTitle").textContent = data.title;
   }
 
   updateSeekButtons();
-
 }
 
-
-/* =========================
-   進度
-========================= */
 
 function updateProgress() {
-
   $("progress").textContent =
     `第 ${pos + 1} / ${order.length} 首`;
-
 }
 
-
-/* =========================
-   倒數顯示
-========================= */
 
 function updateTimer() {
-
-  $("timer").textContent =
-    remainingSeconds;
-
+  $("timer").textContent = remainingSeconds;
 }
 
 
-/* =========================
-   清除計時器
-========================= */
+/* 計時器 */
 
 function clearTimers() {
-
   if (countdownTimer) {
-
     clearInterval(countdownTimer);
-
     countdownTimer = null;
-
   }
 
   isCountdownRunning = false;
-
 }
 
 
-/* =========================
-   開始一個新的 N 秒播放
-========================= */
-
 function startTimedPlayback() {
-
-  if (!player) {
-    return;
-  }
-
+  if (!player) return;
 
   clearTimers();
 
-
-  remainingSeconds =
-    currentDuration;
-
-  blindFinished = false;
-
+  remainingSeconds = currentDuration;
   updateTimer();
 
-
   player.playVideo();
-
-
   isCountdownRunning = true;
 
+  countdownTimer = setInterval(() => {
+    if (!isCountdownRunning) return;
 
-  countdownTimer =
-    setInterval(() => {
+    remainingSeconds--;
+    updateTimer();
 
-      if (!isCountdownRunning) {
-        return;
-      }
-
-
-      remainingSeconds--;
-
-      updateTimer();
-
-
-      if (remainingSeconds <= 0) {
-
-        finishTimedPlayback();
-
-      }
-
-    }, 1000);
-
+    if (remainingSeconds <= 0) {
+      finishTimedPlayback();
+    }
+  }, 1000);
 }
 
 
-/* =========================
-   播放結束
-========================= */
-
 function finishTimedPlayback() {
-
   clearTimers();
 
   remainingSeconds = 0;
-
   updateTimer();
 
-  blindFinished = true;
-
   if (player) {
     player.pauseVideo();
   }
 
-  $("status").textContent =
-    "盲播結束，可以猜答案了。";
-
+  $("status").textContent = "盲播結束，可以猜答案了。";
 }
 
 
-/* =========================
-   暫停
-========================= */
+/* 暫停：保留剩餘倒數 */
 
 function pauseVideo() {
-
-  if (!player) {
-    return;
-  }
-
+  if (!player) return;
 
   player.pauseVideo();
-
-
-  /*
-    只停止倒數，不重設 remainingSeconds。
-  */
-
   isCountdownRunning = false;
 
-
-  $("status").textContent =
-    "已暫停，可以按「繼續」。";
-
+  $("status").textContent = "已暫停，可以按「繼續」。";
 }
 
 
-/* =========================
-   繼續
-========================= */
+/* 繼續：從剩餘秒數接著播 */
 
 function resumeVideo() {
-
-  if (!player) {
-    return;
-  }
-
-
-  /*
-    還有剩餘秒數：
-    從原本剩下的時間繼續。
-
-    沒有剩餘秒數：
-    開一個新的完整 N 秒。
-  */
+  if (!player) return;
 
   if (remainingSeconds > 0) {
+    // 如果計時器已不存在，就重新建立，但不重設秒數
+    if (!countdownTimer) {
+      countdownTimer = setInterval(() => {
+        if (!isCountdownRunning) return;
+
+        remainingSeconds--;
+        updateTimer();
+
+        if (remainingSeconds <= 0) {
+          finishTimedPlayback();
+        }
+      }, 1000);
+    }
 
     player.playVideo();
-
     isCountdownRunning = true;
-
-    $("status").textContent =
-      "繼續播放。";
-
+    $("status").textContent = "繼續播放。";
     return;
-
   }
 
-
   startTimedPlayback();
-
 }
 
 
-/* =========================
-   結束後繼續
-========================= */
+/* 結束後繼續：重新開始完整 N 秒 */
 
 function continueAfterBlind() {
-
-  /*
-    這是新的完整盲播，
-    所以倒數重新從 N 秒開始。
-  */
-
   startTimedPlayback();
-
 }
 
 
-/* =========================
-   跳轉
-========================= */
+/* 跳轉：每次都重新倒數完整 N 秒 */
 
 function seekTo(seconds) {
+  if (!player) return;
 
-  if (!player) {
-    return;
-  }
-
-
-  /*
-    每次跳轉都算新的盲播。
-
-    例如：
-    按 1:00
-    → 跳到 1:00
-    → 倒數重新變成 20
-    → 開始播放
-  */
-
-  player.seekTo(
-    seconds,
-    true
-  );
-
-
+  player.seekTo(seconds, true);
   startTimedPlayback();
-
 }
 
 
-/* =========================
-   啟用 / 停用跳轉按鈕
-========================= */
+/* 跳轉按鈕狀態 */
+
+function resetSeekButtons() {
+  ["seek0", "seek60", "seek120", "seek180"].forEach(id => {
+    $(id).disabled = true;
+  });
+}
+
 
 function updateSeekButtons() {
+  if (!player) return;
 
-  if (!player) {
-    return;
-  }
+  const duration = player.getDuration();
 
+  if (!duration || duration <= 0) return;
 
-  const duration =
-    player.getDuration();
-
-
-  if (!duration || duration <= 0) {
-    return;
-  }
-
-
-  $("seek0").disabled =
-    duration <= 0;
-
-  $("seek60").disabled =
-    duration <= 60;
-
-  $("seek120").disabled =
-    duration <= 120;
-
-  $("seek180").disabled =
-    duration <= 180;
-
+  $("seek0").disabled = false;
+  $("seek60").disabled = duration < 60;
+  $("seek120").disabled = duration < 120;
+  $("seek180").disabled = duration < 180;
 }
 
 
-/* =========================
-   揭曉答案
-========================= */
+/* 揭曉答案 */
 
 function revealAnswer() {
-
   clearTimers();
-
 
   if (player) {
     player.pauseVideo();
   }
-
 
   updateVideoInfo();
 
-
-  $("answer").style.display =
-    "block";
-
-
-  $("status").textContent =
-    "答案已揭曉。";
-
+  // 顯示自訂註解及 YouTube 標題
+  $("answer").style.display = "block";
+  $("status").textContent = "答案已揭曉。";
 }
 
-
-/* =========================
-   隱藏答案
-========================= */
 
 function hideAnswer() {
-
-  $("answer").style.display =
-    "none";
-
+  $("answer").style.display = "none";
 }
 
 
-/* =========================
-   下一首
-========================= */
+/* 下一首 */
 
 function next() {
-
   clearTimers();
 
   remainingSeconds = 0;
-
   updateTimer();
-
-  blindFinished = false;
-
-
-  /*
-    先確保目前影片停止。
-  */
 
   if (player) {
     player.pauseVideo();
   }
-
 
   pos++;
 
-
   if (pos >= order.length) {
-
     pos = 0;
-
-    $("status").textContent =
-      "全部歌曲播放完畢，回到第一首。";
-
+    $("status").textContent = "全部歌曲播放完畢，回到第一首。";
   }
 
-
   loadVideo();
-
 }
 
 
-/* =========================
-   重新設定
-========================= */
+/* 回設定頁：保留歌曲內容 */
 
 function resetGame() {
-
   clearTimers();
-
 
   if (player) {
     player.pauseVideo();
   }
 
-
-  /*
-    不清除 textarea。
-    所以回設定頁後，
-    原本貼上的歌曲仍然會保留。
-  */
-
-  $("game").style.display =
-    "none";
-
-  $("setup").style.display =
-    "block";
-
+  $("game").style.display = "none";
+  $("setup").style.display = "block";
 }
 
 
-/* =========================
-   初始狀態
-========================= */
+/* 初始顯示 */
 
-$("timer").textContent =
-  $("duration").value;
+$("timer").textContent = $("duration").value;
+resetSeekButtons();
 
 </script>
-
 </body>
 </html>
